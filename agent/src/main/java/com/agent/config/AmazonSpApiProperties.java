@@ -12,10 +12,9 @@ public class AmazonSpApiProperties {
     private String endpoint;
 
     @NotBlank
-    private String region;
-
-    @NotBlank
     private String marketplaceId;
+
+    private String sellerId;
 
     @NotBlank
     private String lwaClientId;
@@ -25,10 +24,7 @@ public class AmazonSpApiProperties {
 
     @NotBlank
     private String lwaRefreshToken;
-
-    private String awsAccessKeyId;
-
-    private String awsSecretAccessKey;
+    private String timeZone = "Asia/Kolkata";
 
     public String getEndpoint() {
         return endpoint;
@@ -38,16 +34,16 @@ public class AmazonSpApiProperties {
         this.endpoint = endpoint;
     }
 
-    public String getRegion() {
-        return region;
-    }
-
-    public void setRegion(String region) {
-        this.region = region;
-    }
-
     public String getMarketplaceId() {
         return marketplaceId;
+    }
+
+    public String getSellerId() {
+        return sellerId;
+    }
+
+    public void setSellerId(String sellerId) {
+        this.sellerId = sellerId;
     }
 
     public void setMarketplaceId(String marketplaceId) {
@@ -78,19 +74,12 @@ public class AmazonSpApiProperties {
         this.lwaRefreshToken = lwaRefreshToken;
     }
 
-    public String getAwsAccessKeyId() {
-        return awsAccessKeyId;
+    public String getTimeZone() {
+        return timeZone;
     }
 
-    public void setAwsAccessKeyId(String awsAccessKeyId) {
-        this.awsAccessKeyId = awsAccessKeyId;
+    public void setTimeZone(String timeZone) {
+        this.timeZone = timeZone;
     }
 
-    public String getAwsSecretAccessKey() {
-        return awsSecretAccessKey;
-    }
-
-    public void setAwsSecretAccessKey(String awsSecretAccessKey) {
-        this.awsSecretAccessKey = awsSecretAccessKey;
-    }
 }

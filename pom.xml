@@ -1,6 +1,6 @@
 <modelVersion>4.0.0</modelVersion>
 <groupId>com.example</groupId>
-<artifactId>microservices-parent</artifactId>
+<artifactId>Amazon-Seller-Assistant</artifactId>
 <version>1.0.0</version>
 <packaging>pom</packaging>
 <modules>

@@ -9,13 +9,31 @@
         .chat-container { height: calc(100vh - 160px); }
         .message-user { background-color: #3b82f6; color: white; align-self: flex-end; }
         .message-bot { background-color: #f3f4f6; color: #1f2937; align-self: flex-start; }
+        .chat-message { width: fit-content; max-width: 96%; }
+        .responsive-table { width: 100%; margin: 0.75rem 0; }
+        .table-scroll { overflow-x: auto; }
+        .response-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .response-table th, .response-table td { border: 1px solid #d1d5db; padding: 0.55rem 0.7rem; text-align: left; vertical-align: top; }
+        .response-table th { background: #e5e7eb; font-weight: 600; }
+        .mobile-table-cards { display: none; }
+        @media (min-width: 640px) {
+            .chat-message { max-width: 80%; }
+        }
+        @media (max-width: 639px) {
+            .table-scroll { display: none; }
+            .mobile-table-cards { display: grid; gap: 0.6rem; }
+            .mobile-table-card { border: 1px solid #d1d5db; border-radius: 0.6rem; background: white; padding: 0.7rem; }
+            .mobile-table-field + .mobile-table-field { border-top: 1px solid #e5e7eb; margin-top: 0.45rem; padding-top: 0.45rem; }
+            .mobile-table-label { display: block; color: #6b7280; font-size: 0.75rem; font-weight: 600; }
+            .mobile-table-value { margin: 0.1rem 0 0; overflow-wrap: anywhere; }
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="max-w-4xl mx-auto p-4">
         <header class="flex items-center justify-between mb-6 bg-white p-4 rounded-lg shadow-sm">
             <h1 class="text-2xl font-bold text-blue-600 flex items-center gap-2">
-                <span>🤖</span> Ecommerce Seller Assistant (AI)
+                <span>🤖</span> Amazon Seller Assistant (AI)
             </h1>
             <div class="text-sm text-gray-500">Online | Powered by Ollama</div>
         </header>
@@ -49,10 +67,104 @@
 
         function appendMessage(text, isUser) {
             const msgDiv = document.createElement('div');
-            msgDiv.className = `p-3 rounded-lg max-w-[80%] shadow-sm ${isUser ? 'message-user' : 'message-bot'}`;
+            msgDiv.className = `chat-message p-3 rounded-lg shadow-sm ${isUser ? 'message-user' : 'message-bot'}`;
             msgDiv.textContent = text;
             chatWindow.appendChild(msgDiv);
             chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function parseTableCells(line) {
+            const trimmed = line.trim();
+            if (!trimmed.includes('|')) return null;
+            return trimmed.replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim());
+        }
+
+        function isTableSeparator(cells) {
+            return cells && cells.length > 1 && cells.every(cell => /^:?-{3,}:?$/.test(cell));
+        }
+
+        function renderResponse(element, text) {
+            element.replaceChildren();
+            const lines = text.split('\n');
+            let plainLines = [];
+            const flushText = () => {
+                if (!plainLines.length) return;
+                const block = document.createElement('div');
+                block.className = 'whitespace-pre-wrap';
+                block.textContent = plainLines.join('\n');
+                element.appendChild(block);
+                plainLines = [];
+            };
+
+            for (let i = 0; i < lines.length;) {
+                const headers = parseTableCells(lines[i]);
+                const separator = parseTableCells(lines[i + 1] || '');
+                if (!headers || !isTableSeparator(separator) || headers.length !== separator.length) {
+                    plainLines.push(lines[i++]);
+                    continue;
+                }
+
+                flushText();
+                i += 2;
+                const rows = [];
+                while (i < lines.length) {
+                    const cells = parseTableCells(lines[i]);
+                    if (!cells) break;
+                    rows.push(cells);
+                    i++;
+                }
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'responsive-table';
+                const scroll = document.createElement('div');
+                scroll.className = 'table-scroll';
+                const table = document.createElement('table');
+                table.className = 'response-table';
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                headers.forEach(label => {
+                    const th = document.createElement('th');
+                    th.textContent = label;
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
+                const tbody = document.createElement('tbody');
+                rows.forEach(row => {
+                    const tr = document.createElement('tr');
+                    headers.forEach((_, index) => {
+                        const td = document.createElement('td');
+                        td.textContent = row[index] || '';
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+                table.append(thead, tbody);
+                scroll.appendChild(table);
+                wrapper.appendChild(scroll);
+
+                const cards = document.createElement('div');
+                cards.className = 'mobile-table-cards';
+                rows.forEach(row => {
+                    const card = document.createElement('div');
+                    card.className = 'mobile-table-card';
+                    headers.forEach((label, index) => {
+                        const field = document.createElement('div');
+                        field.className = 'mobile-table-field';
+                        const fieldLabel = document.createElement('span');
+                        fieldLabel.className = 'mobile-table-label';
+                        fieldLabel.textContent = label;
+                        const value = document.createElement('p');
+                        value.className = 'mobile-table-value';
+                        value.textContent = row[index] || '';
+                        field.append(fieldLabel, value);
+                        card.appendChild(field);
+                    });
+                    cards.appendChild(card);
+                });
+                wrapper.appendChild(cards);
+                element.appendChild(wrapper);
+            }
+            flushText();
         }
 
         chatForm.addEventListener('submit', async (e) => {
@@ -63,11 +175,15 @@
             appendMessage(text, true);
             userInput.value = '';
 
-            // Show loading state
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'message-bot p-3 rounded-lg max-w-[80%] shadow-sm italic text-gray-500';
-            loadingDiv.textContent = 'Thinking...';
-            chatWindow.appendChild(loadingDiv);
+            const replyDiv = document.createElement('div');
+            replyDiv.className = 'chat-message message-bot p-3 rounded-lg shadow-sm';
+            const activity = document.createElement('div');
+            activity.className = 'italic text-gray-500';
+            activity.textContent = 'Understanding your request…';
+            const answer = document.createElement('div');
+            let answerText = '';
+            replyDiv.append(activity, answer);
+            chatWindow.appendChild(replyDiv);
             chatWindow.scrollTop = chatWindow.scrollHeight;
 
             try {
@@ -79,12 +195,45 @@
 
                 if (!response.ok) throw new Error('Server error');
                 
-                const data = await response.text();
-                chatWindow.removeChild(loadingDiv);
-                appendMessage(data, false);
+                if (!response.body) throw new Error('Streaming is unavailable');
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let receivedContent = false;
+                while (true) {
+                    const { value, done } = await reader.read();
+                    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+                    const frames = buffer.split(/\r?\n\r?\n/);
+                    buffer = frames.pop() || '';
+                    for (const frame of frames) {
+                        const dataLine = frame.split(/\r?\n/).find(line => line.startsWith('data:'));
+                        if (!dataLine) continue;
+                        const event = JSON.parse(dataLine.slice(5).trim());
+                        if (event.type === 'status') {
+                            activity.textContent = event.content;
+                        } else if (event.type === 'content') {
+                            if (!receivedContent) {
+                                receivedContent = true;
+                                activity.remove();
+                            }
+                            answerText += event.content;
+                            answer.textContent = answerText;
+                        } else if (event.type === 'error') {
+                            activity.remove();
+                            answerText = event.content;
+                            answer.textContent = answerText;
+                        }
+                    }
+                    chatWindow.scrollTop = chatWindow.scrollHeight;
+                    if (done) break;
+                }
+                if (!receivedContent && !answer.textContent) activity.textContent = 'No response was generated.';
+                if (answerText) renderResponse(answer, answerText);
             } catch (error) {
-                chatWindow.removeChild(loadingDiv);
-                appendMessage('Sorry, I encountered an error. Please try again.', false);
+                activity.remove();
+                answerText = 'Sorry, I encountered an error. Please try again.';
+                answer.textContent = answerText;
                 console.error(error);
             }
         });

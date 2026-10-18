@@ -1,98 +1,85 @@
-# Microservices Parent
+# Amazon Seller Assistant
 
-A multi-module Maven project for an ecommerce platform built from independent Spring Boot
-microservices plus an AI chat agent. The parent POM aggregates the modules below so they can be
-built together, while each service remains independently runnable and deployable.
+Amazon Seller Assistant is a comprehensive AI-driven ecosystem designed to help e-commerce sellers manage their store operations through a natural language interface. It integrates Large Language Models (LLMs), Model Context Protocol (MCP), Retrieval-Augmented Generation (RAG), and robust OAuth2 security to provide a seamless assistant experience.
 
-## Modules
+## 🏗️ System Architecture
 
-| Module | Artifact dir | Purpose |
-| --- | --- | --- |
-| [Agent](agent/README.md) | [`agent/`](agent) | Spring Boot REST API for ecommerce data (orders, customers, payments, inventory) and Amazon Selling Partner API (SP-API) order operations. Backed by MySQL. |
-| [Ecommerce Auth Server](ecommerce-auth-server/README.md) | [`ecommerce-auth-server/`](ecommerce-auth-server) | Spring Authorization Server configured for the OAuth2 `client_credentials` grant only. Issues signed JWTs for machine-to-machine calls between the other services. |
-| [Springboot MCP Server](springboot-mcp-server/README.md) | [`springboot-mcp-server/`](springboot-mcp-server) | Exposes the Agent's ecommerce API as [MCP](https://modelcontextprotocol.io/) tools (e.g. `getAllOrders`, `createProduct`) that MCP-compatible AI clients can discover and call over HTTP. |
-| [Ecommerce RAG Service](ecommerece-rag-service/README.md) | [`ecommerece-rag-service/`](ecommerece-rag-service) | Indexes the product/category catalog from MySQL into vector embeddings (via Ollama) stored in SQLite (`sqlite-vec`), and serves semantic search over the catalog. |
-| [Ecommerce AI Agent](ecommerce-ai-agent/README.md) | [`ecommerce-ai-agent/`](ecommerce-ai-agent) | Web chat assistant (Spring AI + Ollama) for ecommerce questions and operations. Calls the MCP server for live tools and the RAG service for catalog search. |
+The system is composed of several microservices that work together to provide AI capabilities:
 
-## Architecture
+- **`ecommerce-ai-agent`**: The main entry point. A Spring Boot application providing a web chat interface. It uses Spring AI and Ollama to orchestrate responses by combining RAG search and MCP tools.
+- **`springboot-mcp-server`**: Acts as a bridge between the AI agent and the core e-commerce API. It exposes business operations (orders, customers, products) as **MCP Tools** that the LLM can discover and invoke.
+- **`ecommerece-rag-service`**: Provides semantic search over the product catalog. It indexes MySQL data into a SQLite vector database using `sqlite-vec` and Ollama embeddings, allowing the agent to find relevant products or policies.
+- **`ecommerce-auth-server`**: A centralized OAuth2 Authorization Server. It manages machine-to-machine (M2M) authentication using `client_credentials` grants, ensuring secure communication between all services.
+- **`agent` (Ecommerce API Server)**: The core backend REST API that handles the actual business logic and database interactions for orders, customers, and payments.
+
+### Request Flow
+`User` $\rightarrow$ `AI Agent` $\rightarrow$ (`RAG Service` for knowledge / `MCP Server` for actions) $\rightarrow$ `Ecommerce API` $\rightarrow$ `MySQL`
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **JDK 17+**
+- **MySQL** (for product catalog and order data)
+- **Ollama** (running locally with `gemma4` and `nomic-embed-text` models)
+- **sqlite-vec** (extension library installed on your OS for the RAG service)
+
+### Installation & Execution Order
+
+To get the full system running, start the services in the following order:
+
+1. **Authorization Server** (Port 9000)
+   ```bash
+   cd ecommerce-auth-server
+   ./mvnw spring-boot:run
+   ```
+2. **Core API Server** (Port 8080)
+   ```bash
+   cd agent
+   ./mvnw spring-boot:run
+   ```
+3. **RAG Service** (Port 8081)
+   ```bash
+   cd ecommerece-rag-service
+   ./mvnw spring-boot:run
+   # After starting, trigger initial indexing:
+   curl -X POST http://localhost:8081/api/rag/reindex
+   ```
+4. **MCP Server** (Port 8090)
+   ```bash
+   cd springboot-mcp-server
+   ./mvnw spring-boot:run
+   ```
+5. **AI Agent** (Port 8085)
+   ```bash
+   cd ecommerce-ai-agent
+   ./mvnw spring-boot:run
+   ```
+
+## 🛠️ Key Features
+
+### AI & Intelligence
+- **Natural Language Chat**: Interact with your store data using a browser-based UI.
+- **Tool Use (MCP)**: The agent can automatically decide to call tools like `getAllOrders` or `updateProductInventory` to perform real actions.
+- **Semantic Search (RAG)**: Instead of keyword matching, the agent understands the intent behind product queries.
+
+### Security & Observability
+- **OAuth2 M2M Security**: Every internal request is authenticated via JWTs issued by the `ecommerce-auth-server`.
+- **Full Tracing**: Integrated with OpenTelemetry, Prometheus, and Loki for monitoring agent traces and system health.
+
+## ⚙️ Configuration
+
+Each module has its own `application.properties`. Common configurations include:
+- `spring.ai.ollama.base-url`: URL of your Ollama instance.
+- `spring.security.oauth2.client...`: Client IDs and secrets for inter-service communication.
+- `app.sqlite-vec.extension-path`: Absolute path to the `vec0` library for RAG.
+
+## 📁 Project Structure
 
 ```text
-                         ┌────────────────────────┐
-                         │  ecommerce-auth-server  │
-                         │  (OAuth2 client_creds)  │
-                         └───────────▲─────────────┘
-                                      │ issues/validates JWTs
-            ┌─────────────────────────┼─────────────────────────┐
-            │                         │                         │
-┌───────────┴───────────┐  ┌──────────┴──────────┐   ┌───────────┴──────────┐
-│  ecommerce-ai-agent    │  │ springboot-mcp-server│   │        agent         │
-│  (chat UI / Spring AI) │──▶  (MCP tool server)   │──▶ (ecommerce REST API) │
-└───────────┬────────────┘  └──────────────────────┘   └───────────┬──────────┘
-            │                                                       │
-            ▼                                                       ▼
-   ecommerece-rag-service                                        MySQL
-   (catalog semantic search,                              (orders, customers,
-    Ollama embeddings + SQLite)                             products, payments)
+.
+├── agent/                   # Core E-commerce REST API
+├── ecommerce-ai-agent/       # AI Orchestrator & Chat UI
+├── ecommerce-auth-server/    # OAuth2 Authorization Server
+├── ecommerece-rag-service/   # Vector Search & Indexing Service
+└── springboot-mcp-server/    # MCP Tool Bridge
 ```
-
-The auth server issues and validates all tokens; each other service authenticates independently
-with its own registered client credentials, so no caller's token is forwarded between hops.
-
-## Requirements
-
-- Java 17 or later
-- Maven (or the Maven wrapper included in each module)
-- MySQL (for the `agent`, `ecommerce-auth-server`, and `ecommerece-rag-service` modules)
-- [Ollama](https://ollama.com/) (for the RAG service and AI agent)
-- The `sqlite-vec` loadable extension (for the RAG service)
-
-See each module's README for exact versions, environment variables, and setup steps.
-
-## Building
-
-Build all modules from the repository root:
-
-```powershell
-.\mvnw.cmd clean install
-```
-
-Or, on macOS/Linux:
-
-```sh
-./mvnw clean install
-```
-
-To build or run a single module, use its own Maven wrapper from within that module's directory
-(see the module's README for details), for example:
-
-```powershell
-cd agent
-.\mvnw.cmd spring-boot:run
-```
-
-## Suggested startup order
-
-Because the services depend on each other for authentication and data, start them in roughly this
-order for a full local environment:
-
-1. MySQL (with the required schemas/tables for `agent`, `ecommerce-auth-server`, and
-   `ecommerece-rag-service`)
-2. Ollama (with the embedding and chat models pulled)
-3. `ecommerce-auth-server` — issues/validates all OAuth2 tokens
-4. `agent` — the ecommerce REST API
-5. `springboot-mcp-server` — exposes the agent's API as MCP tools
-6. `ecommerece-rag-service` — catalog semantic search
-7. `ecommerce-ai-agent` — the chat UI that ties everything together
-
-## Testing
-
-Run each module's tests from its own directory with its Maven wrapper, for example:
-
-```powershell
-cd agent
-.\mvnw.cmd test
-```
-
-## License
-
-No license has been specified for this project.

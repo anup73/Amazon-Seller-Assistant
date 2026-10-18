@@ -15,7 +15,7 @@ import org.springframework.web.client.RestClient;
 /**
  * Wires up the outbound OAuth2 client_credentials flow: the MCP server obtains its own
  * access token (client registration "agent-api") and attaches it as a Bearer header when
- * calling the ecommerce-api-server ("agent"). Uses the service-based authorized client
+ * calling the agent API service. Uses the service-based authorized client
  * manager since there is no end-user/session involved - this is a pure machine-to-machine
  * call made from within @Tool method invocations.
  */
@@ -38,9 +38,9 @@ public class OAuth2ClientConfig {
     }
 
     @Bean
-    public RestClient ecommerceApiRestClient(
+    public RestClient amazonOrdersApiRestClient(
             OAuth2AuthorizedClientManager authorizedClientManager,
-            @Value("${ecommerce.api.base-url}") String baseUrl) {
+            @Value("${agent.api.base-url}") String baseUrl) {
 
         OAuth2ClientHttpRequestInterceptor requestInterceptor =
                 new OAuth2ClientHttpRequestInterceptor(authorizedClientManager);
