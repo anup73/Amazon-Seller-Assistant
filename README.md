@@ -2,6 +2,28 @@
 
 Amazon Seller Assistant is a comprehensive AI-driven ecosystem designed to help e-commerce sellers manage their store operations through a natural language interface. It integrates Large Language Models (LLMs), Model Context Protocol (MCP), Retrieval-Augmented Generation (RAG), and robust OAuth2 security to provide a seamless assistant experience.
 
+## 🛠️ Key Features
+
+### AI & Intelligence
+- **Natural Language Chat**: Interact with your store data using a browser-based UI.
+- **Tool Use (MCP)**: The agent can automatically decide to call tools like `getAllOrders` or `updateProductInventory` to perform real actions.
+- **Semantic Search (RAG)**: Instead of keyword matching, the agent understands the intent behind product queries.
+- **✨ Multi-Agent Report Workflows**: Implements a coordinator-specialist pattern for automated business reporting:
+    - **Coordinator Agents**: Manage the overall reporting process (e.g., `OrderSummaryReportService`, `ProductInventoryReportService`).
+    - **Specialist Agents**: Focused research agents (e.g., Delivered Order Researcher, Cancellation Pattern Researcher) that gather specific data.
+    - **Automated Delivery**: Scheduled tasks (`DailyOrderSummaryReportTask`, `DailyProductInventoryReportTask`) trigger these workflows to generate and email daily business insights.
+
+### Security & Observability
+- **OAuth2 M2M Security**: Every internal request is authenticated via JWTs issued by the `ecommerce-auth-server`.
+- **Full Tracing**: Integrated with OpenTelemetry, Prometheus, and Loki for monitoring agent traces and system health.
+
+## ⚙️ Configuration
+
+Each module has its own `application.properties`. Common configurations include:
+- `spring.ai.ollama.base-url`: URL of your Ollama instance.
+- `spring.security.oauth2.client...`: Client IDs and secrets for inter-service communication.
+- `app.sqlite-vec.extension-path`: Absolute path to the `vec0` library for RAG.
+
 ## 🏗️ System Architecture
 
 The system is composed of several microservices that work together to provide AI capabilities:
@@ -54,24 +76,6 @@ To get the full system running, start the services in the following order:
    cd ecommerce-ai-agent
    ./mvnw spring-boot:run
    ```
-
-## 🛠️ Key Features
-
-### AI & Intelligence
-- **Natural Language Chat**: Interact with your store data using a browser-based UI.
-- **Tool Use (MCP)**: The agent can automatically decide to call tools like `getAllOrders` or `updateProductInventory` to perform real actions.
-- **Semantic Search (RAG)**: Instead of keyword matching, the agent understands the intent behind product queries.
-
-### Security & Observability
-- **OAuth2 M2M Security**: Every internal request is authenticated via JWTs issued by the `ecommerce-auth-server`.
-- **Full Tracing**: Integrated with OpenTelemetry, Prometheus, and Loki for monitoring agent traces and system health.
-
-## ⚙️ Configuration
-
-Each module has its own `application.properties`. Common configurations include:
-- `spring.ai.ollama.base-url`: URL of your Ollama instance.
-- `spring.security.oauth2.client...`: Client IDs and secrets for inter-service communication.
-- `app.sqlite-vec.extension-path`: Absolute path to the `vec0` library for RAG.
 
 ## 📁 Project Structure
 
